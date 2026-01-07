@@ -7,83 +7,52 @@
   <script src="https://js.arcgis.com/4.29/"></script>
 
   <style>
-    :root{
-      --bg:#555555;
-      --card:#333333;
-      --panel:#444444;
-      --muted:#cccccc;
-      --text:#ffffff;
-      --ringTrack:#555555;
-
-      /* vmin makes the UI respond to height-constrained iframes */
-      --v: 1vmin;
-
-      --cardMax: 600px;
-
-      --pad: clamp(8px, calc(var(--v) * 1.6), 14px);
-      --gap: clamp(6px, calc(var(--v) * 1.2), 12px);
-
-      --hdr: clamp(16px, calc(var(--v) * 4.4), 34px);
-
-      --ringSize: clamp(86px, calc(var(--v) * 22), 140px);
-      --innerSize: calc(var(--ringSize) * 0.73);
-
-      --pctSize: clamp(18px, calc(var(--v) * 5.5), 30px);
-      --subSize: clamp(10px, calc(var(--v) * 2.7), 12px);
-
-      --kpiNum: clamp(13px, calc(var(--v) * 3.2), 17px);
-      --kpiLbl: clamp(10px, calc(var(--v) * 2.4), 12px);
-
-      --small: clamp(10px, calc(var(--v) * 2.3), 12px);
-    }
-
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      background: var(--bg);
+      background: #555555;
       font-family: "Segoe UI", sans-serif;
-      color: var(--text);
-      overflow: hidden; /* prevent iframe scrollbars */
+      overflow: hidden;
     }
 
-    /* Fill the iframe instead of centering vertically */
-    .wrap {
+    /* The iframe space */
+    #viewport {
       width: 100%;
       height: 100%;
       display: flex;
-      align-items: stretch;
+      align-items: flex-start;
       justify-content: center;
-      padding: 0;
-      box-sizing: border-box;
+      overflow: hidden;
     }
 
+    /* This element gets scaled */
+    #scaled {
+      transform-origin: top center;
+      will-change: transform;
+    }
+
+    /* Native design size (like a PowerPoint slide object) */
     .card {
-      background: var(--card);
+      width: 600px;
+      height: 420px;
+      background: #333333;
       border-radius: 10px;
-      padding: var(--pad);
-      width: 100%;
-      max-width: var(--cardMax);
-      height: 100%;
-      max-height: 100%;
+      padding: 14px;
       box-shadow: 0 0 12px rgba(255,0,0,0.28);
-      text-align: center;
+      color: white;
       box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      overflow: hidden; /* ensure no internal scroll */
+      text-align: center;
     }
 
     .header {
-      font-size: var(--hdr);
+      font-size: 34px;
       font-weight: 800;
       color: red;
       animation: flash 1s infinite;
-      margin: 0 0 calc(var(--gap) * 0.6) 0;
+      margin: 0 0 10px 0;
       line-height: 1.05;
-      flex: 0 0 auto;
     }
 
     @keyframes flash {
@@ -93,16 +62,15 @@
 
     .warn {
       display: none;
-      margin: 0 auto calc(var(--gap) * 0.8) auto;
+      margin: 0 auto 10px auto;
       background: #ffcc00;
       color: #111111;
       font-weight: 900;
-      padding: 0.25rem 0.5rem;
+      padding: 6px 10px;
       border-radius: 6px;
       width: fit-content;
       animation: warnFlash 1s infinite;
-      font-size: var(--small);
-      flex: 0 0 auto;
+      font-size: 12px;
     }
 
     @keyframes warnFlash {
@@ -113,37 +81,35 @@
     .top-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: var(--gap);
+      gap: 12px;
       align-items: center;
-      margin-bottom: calc(var(--gap) * 0.6);
-      flex: 0 0 auto;
+      margin-bottom: 10px;
     }
 
-    @media (max-width: 420px) {
-      .top-row { grid-template-columns: 1fr; }
+    .ring, .compass {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      margin: 0 auto;
     }
 
     .ring {
-      width: var(--ringSize);
-      height: var(--ringSize);
-      border-radius: 50%;
       background: conic-gradient(
         var(--ringColor) 0deg,
         var(--ringColor) var(--deg),
-        var(--ringTrack) var(--deg),
-        var(--ringTrack) 360deg
+        #555555 var(--deg),
+        #555555 360deg
       );
-      margin: 0 auto;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .ring .inner {
-      width: var(--innerSize);
-      height: var(--innerSize);
+      width: 102px;
+      height: 102px;
       border-radius: 50%;
-      background: var(--card);
+      background: #333333;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -151,23 +117,10 @@
       box-shadow: inset 0 0 10px rgba(0,0,0,0.35);
     }
 
-    .ring .pct {
-      font-size: var(--pctSize);
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .ring .sub {
-      font-size: var(--subSize);
-      color: #dddddd;
-      margin-top: 0.1rem;
-    }
+    .ring .pct { font-size: 30px; font-weight: 900; line-height: 1; }
+    .ring .sub { font-size: 12px; color: #dddddd; margin-top: 2px; }
 
     .compass {
-      width: var(--ringSize);
-      height: var(--ringSize);
-      margin: 0 auto;
-      border-radius: 50%;
       background: #2f2f2f;
       box-shadow: inset 0 0 10px rgba(0,0,0,0.35);
       position: relative;
@@ -178,7 +131,7 @@
 
     .compass .dial {
       position: absolute;
-      inset: calc(var(--ringSize) * 0.07);
+      inset: 10px;
       border-radius: 50%;
       border: 2px solid #555555;
     }
@@ -186,104 +139,80 @@
     .compass .n, .compass .s, .compass .e, .compass .w {
       position: absolute;
       font-weight: 900;
-      font-size: var(--small);
+      font-size: 12px;
       color: #eaeaea;
       opacity: 0.9;
     }
 
-    .compass .n { top: 4px; }
-    .compass .s { bottom: 4px; color:#a9a9a9; }
-    .compass .e { right: 6px; color:#a9a9a9; }
-    .compass .w { left: 6px; color:#a9a9a9; }
+    .compass .n { top: 6px; }
+    .compass .s { bottom: 6px; color:#a9a9a9; }
+    .compass .e { right: 8px; color:#a9a9a9; }
+    .compass .w { left: 8px; color:#a9a9a9; }
 
     .needle {
       width: 0;
       height: 0;
       border-left: 9px solid transparent;
       border-right: 9px solid transparent;
-      border-bottom: calc(var(--ringSize) * 0.36) solid #ff4444;
-      transform-origin: 50% calc(var(--ringSize) * 0.32);
+      border-bottom: 50px solid #ff4444;
+      transform-origin: 50% 42px;
       transform: rotate(var(--headingDeg));
       transition: transform 600ms ease;
       filter: drop-shadow(0 0 6px rgba(255,0,0,0.3));
     }
 
     .compass-label {
-      margin-top: 0.25rem;
-      font-size: var(--small);
+      margin-top: 6px;
+      font-size: 12px;
       color: #dddddd;
     }
 
     .section {
-      margin: 0 0 calc(var(--gap) * 0.6) 0;
-      font-size: var(--small);
+      margin: 0 0 10px 0;
+      font-size: 12px;
       color: #dddddd;
-      flex: 0 0 auto;
     }
 
     .kpis {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: calc(var(--gap) * 0.7);
-      margin-top: 0;
-      flex: 0 0 auto;
+      gap: 10px;
     }
 
     .kpi {
-      background: var(--panel);
+      background: #444444;
       border-radius: 6px;
-      padding: 0.35rem 0.35rem;
-      font-size: var(--kpiLbl);
+      padding: 8px 6px;
+      font-size: 11px;
       line-height: 1.1;
+      min-height: 48px;
       box-sizing: border-box;
-      min-height: clamp(42px, calc(var(--v) * 11), 56px);
     }
 
     .kpi strong {
       display: block;
-      font-size: var(--kpiNum);
+      font-size: 17px;
       font-weight: 900;
-      margin-bottom: 0.1rem;
+      margin-bottom: 2px;
       word-break: break-word;
     }
 
-    .stale {
-      margin-top: calc(var(--gap) * 0.7);
-      font-size: var(--small);
-      color: #ffb3b3;
-      text-align: left;
-      line-height: 1.25;
-      flex: 1 1 auto;
-      overflow: hidden;
-    }
-
     .muted {
-      margin-top: calc(var(--gap) * 0.6);
-      font-size: var(--small);
-      color: var(--muted);
-      flex: 0 0 auto;
-    }
-
-    /* Height-constrained iframe: hide nonessential parts */
-    @media (max-height: 320px) {
-      .stale { display: none; }
-      .section { display: none; }
-      .muted { display: none; }
-    }
-
-    @media (max-height: 260px) {
-      .warn { display: none !important; }
-      .compass-label { display: none; }
+      margin-top: 10px;
+      font-size: 12px;
+      color: #cccccc;
     }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="header">Fleet Status!</div>
-      <div id="warn" class="warn">WARNING: LOW LIVE GPS REPORTING</div>
-      <div id="content">Loading fleet data…</div>
+  <div id="viewport">
+    <div id="scaled">
+      <div class="card">
+        <div class="header">Fleet Status!</div>
+        <div id="warn" class="warn">WARNING: LOW LIVE GPS REPORTING</div>
+        <div id="content">Loading fleet data…</div>
+      </div>
     </div>
   </div>
 
@@ -297,6 +226,18 @@
       const ALERT_THRESHOLD_PCT = 80;
       const REFRESH_MS = 60000;
 
+      const NATIVE_W = 600;
+      const NATIVE_H = 420;
+
+      function scaleToFit(){
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const s = Math.min(vw / NATIVE_W, vh / NATIVE_H);
+        document.getElementById("scaled").style.transform = "scale(" + s + ")";
+      }
+
+      window.addEventListener("resize", scaleToFit);
+
       function ringColorForPct(pct) {
         if (pct >= 80) return "#3cb371";
         if (pct >= 50) return "#ffcc00";
@@ -309,23 +250,16 @@
 
       function toEpochMs(v) {
         if (v === null || v === undefined) return null;
-
-        if (typeof v === "number" && Number.isFinite(v)) {
-          return v < 1e12 ? Math.round(v * 1000) : Math.round(v);
-        }
-
+        if (typeof v === "number" && Number.isFinite(v)) return v < 1e12 ? Math.round(v * 1000) : Math.round(v);
         const s = String(v).trim();
         if (!s) return null;
-
         if (/^\d+$/.test(s)) {
           const n = Number(s);
           if (!Number.isFinite(n)) return null;
           return n < 1e12 ? Math.round(n * 1000) : Math.round(n);
         }
-
         const t = new Date(s).getTime();
         if (Number.isFinite(t)) return t;
-
         const t2 = new Date(s.replace(",", "")).getTime();
         return Number.isFinite(t2) ? t2 : null;
       }
@@ -373,15 +307,11 @@
         return dirs[Math.round(deg / 22.5) % 16];
       }
 
-      function displayName(a) {
-        return a.AliasName || a.Name || a.AVLID || "Unknown";
-      }
-
       function loadFleet() {
         esriRequest(layerUrl, {
           query: {
             where: "1=1",
-            outFields: "Name,AliasName,AVLID,Comments,GPSTimeStamp,Speed,Heading",
+            outFields: "Comments,GPSTimeStamp,Speed,Heading",
             returnGeometry: false,
             f: "json"
           },
@@ -397,37 +327,22 @@
           let live = 0, stale = 0;
           let idling = 0, moving = 0;
 
-          const staleList = [];
           const movingHeadings = [];
           const onHeadings = [];
-
           let newestGpsMs = null;
 
           for (const f of features) {
             const a = (f && f.attributes) ? f.attributes : {};
             const isOn = isOnFromComments(a.Comments);
 
-            if (!isOn) {
-              off++;
-              continue;
-            }
-
+            if (!isOn) { off++; continue; }
             on++;
 
             const tsMs = toEpochMs(a.GPSTimeStamp);
-            if (tsMs !== null) {
-              if (newestGpsMs === null || tsMs > newestGpsMs) newestGpsMs = tsMs;
-            }
+            if (tsMs !== null) newestGpsMs = (newestGpsMs === null || tsMs > newestGpsMs) ? tsMs : newestGpsMs;
 
             const isLive = (tsMs !== null) && ((nowMs - tsMs) <= freshWindowMs);
-            if (isLive) live++;
-            else {
-              stale++;
-              staleList.push({
-                name: displayName(a),
-                minutes: tsMs !== null ? Math.floor((nowMs - tsMs) / 60000) : null
-              });
-            }
+            if (isLive) live++; else stale++;
 
             if (a.Speed === 0) idling++;
             if (a.Speed > 0) moving++;
@@ -438,8 +353,6 @@
               if (a.Speed > 0) movingHeadings.push(hDeg);
             }
           }
-
-          staleList.sort((a, b) => (b.minutes ?? 9999) - (a.minutes ?? 9999));
 
           const onPct = total > 0 ? Math.round((on / total) * 100) : 0;
           const deg = Math.round((onPct / 100) * 360);
@@ -453,12 +366,6 @@
           const headingLabel = chosenHeadingDeg !== null ? degToCardinal(chosenHeadingDeg) : "Unknown";
 
           const newestGpsText = newestGpsMs !== null ? new Date(newestGpsMs).toLocaleString() : "Unknown";
-
-          let staleHtml = "";
-          for (const s of staleList.slice(0, 5)) {
-            const txt = (s.minutes !== null) ? (s.minutes + "m ago") : "no GPS";
-            staleHtml += `<div>${s.name}, ${txt}</div>`;
-          }
 
           document.getElementById("content").innerHTML = `
             <div class="top-row">
@@ -486,36 +393,4 @@
 
             <div class="section">Live window: ${FRESH_MINUTES} minutes, On vehicles only</div>
 
-            <div class="kpis">
-              <div class="kpi"><strong>${total}</strong>Total</div>
-              <div class="kpi"><strong>${on}</strong>On</div>
-              <div class="kpi"><strong>${off}</strong>Off</div>
-              <div class="kpi"><strong>${live}</strong>Live</div>
-
-              <div class="kpi"><strong>${stale}</strong>Stale</div>
-              <div class="kpi"><strong>${idling}</strong>Idling</div>
-              <div class="kpi"><strong>${moving}</strong>Moving</div>
-              <div class="kpi"><strong>${newestGpsText}</strong>Newest GPS</div>
-            </div>
-
-            ${staleHtml ? `<div class="stale"><strong>Most stale (On)</strong><div>${staleHtml}</div></div>` : ""}
-
-            <div class="muted">Updated ${new Date().toLocaleTimeString()}</div>
-          `;
-
-        }).catch(err => {
-          console.error("Error loading fleet data:", err);
-          document.getElementById("warn").style.display = "none";
-          document.getElementById("content").innerHTML =
-            "<div class='err'>Error loading fleet data.</div>" +
-            "<div class='err'>If this service requires authentication or blocks cross-origin requests (CORS), the browser may prevent the query.</div>";
-        });
-      }
-
-      loadFleet();
-      setInterval(loadFleet, REFRESH_MS);
-    });
-  </script>
-</body>
-</html>
-
+            <div class="kpi
