@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fleet Status</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <style>
+    :root{
+      --bg:#555555;
+      --card:#333333;
+      --panel:#444444;
+      --muted:#cccccc;
+      --text:#ffffff;
+      --ringTrack:#555555;
+
+      --cardMax: 600px;
+      --gap: clamp(8px, 1.2vw, 14px);
+      --pad: clamp(10px, 1.5vw, 16px);
+      --hdr: clamp(22px, 4.6vw, 40px);
+      --ringSize: clamp(110px, 32vw, 160px);
+      --innerSize: calc(var(--ringSize) * 0.73);
+      --pctSize: clamp(22px, 6vw, 34px);
+      --subSize: clamp(11px, 2.6vw, 13px);
+      --kpiNum: clamp(14px, 3.2vw, 18px);
+      --kpiLbl: clamp(10px, 2.4vw, 12px);
+      --small: clamp(10px, 2.3vw, 12px);
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      font-family: 'Segoe UI', sans-serif;
+      color: var(--text);
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: var(--pad);
+      width: 100%;
+      max-width: var(--cardMax);
+      box-shadow: 0 0 12px rgba(255,0,0,0.35);
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .header {
+      font-size: var(--hdr);
+      font-weight: 800;
+      color: red;
+      animation: flash 1s infinite;
+      margin: 0 0 calc(var(--gap) * 0.7) 0;
+      line-height: 1.05;
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .warn {
+      display: none;
+      margin: 0 auto var(--gap) auto;
+      background: #ffcc00;
+      color: #111111;
+      font-weight: 900;
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      width: fit-content;
+      animation: warnFlash 1s infinite;
+      font-size: var(--small);
+    }
+
+    @keyframes warnFlash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap);
+      align-items: center;
+      margin-bottom: calc(var(--gap) * 0.6);
+    }
+
+    @media (max-width: 420px) {
+      .top-row { grid-template-columns: 1fr; }
+    }
+
+    .ring {
+      width: var(--ringSize);
+      height: var(--ringSize);
+      border-radius: 50%;
+      background: conic-gradient(
+        var(--ringColor) 0deg,
+        var(--ringColor) var(--deg),
+        var(--ringTrack) var(--deg),
+        var(--ringTrack) 360deg
+      );
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .ring .inner {
+      width: var(--innerSize);
+      height: var(--innerSize);
+      border-radius: 50%;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.35);
+    }
+
+    .ring .pct {
+      font-size: var(--pctSize);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .ring .sub {
+      font-size: var(--subSize);
+      color: #dddddd;
+      margin-top: 0.15rem;
+    }
+
+    .compass {
+      width: var(--ringSize);
+      height: var(--ringSize);
+      margin: 0 auto;
+      border-radius: 50%;
+      background: #2f2f2f;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.35);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .compass .dial {
+      position: absolute;
+      inset: calc(var(--ringSize) * 0.07);
+      border-radius: 50%;
+      border: 2px solid #555555;
+    }
+
+    .compass .n, .compass .s, .compass .e, .compass .w {
+      position: absolute;
+      font-weight: 900;
+      font-size: var(--small);
+      color: #eaeaea;
+    }
+
+    .compass .n { top: 6px; }
+    .compass .s { bottom: 6px; color:#a9a9a9; }
+    .compass .e { right: 8px; color:#a9a9a9; }
+    .compass .w { left: 8px; color:#a9a9a9; }
+
+    .needle {
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: calc(var(--ringSize) * 0.38) solid #ff4444;
+      transform-origin: 50% calc(var(--ringSize) * 0.33);
+      transform: rotate(var(--headingDeg));
+      transition: transform 600ms ease;
+      filter: drop-shadow(0 0 6px rgba(255,0,0,0.35));
+    }
+
+    .compass-label {
+      margin-top: 0.35rem;
+      font-size: var(--small);
+      color: #dddddd;
+    }
+
+    .section {
+      margin-top: calc(var(--gap) * 0.7);
+      font-size: var(--small);
+      color: #dddddd;
+    }
+
+    /* Force exactly 4 columns, so it is 4 top and 4 bottom */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: calc(var(--gap) * 0.7);
+      margin-top: var(--gap);
+    }
+
+    .kpi {
+      background: var(--panel);
+      border-radius: 6px;
+      padding: 0.45rem 0.4rem;
+      font-size: var(--kpiLbl);
+      line-height: 1.15;
+      box-sizing: border-box;
+    }
+
+    .kpi strong {
+      display: block;
+      font-size: var(--kpiNum);
+      font-weight: 900;
+      margin-bottom: 0.15rem;
+      word-break: break-word;
+    }
+
+    .stale {
+      margin-top: var(--gap);
+      font-size: var(--small);
+      color: #ffb3b3;
+      text-align: left;
+      line-height: 1.3;
+    }
+
+    .muted {
+      margin-top: calc(var(--gap) * 0.7);
+      font-size: var(--small);
+      color: var(--muted);
+    }
+
+    .err {
+      font-size: var(--small);
+      color: #d9d9d9;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <div class="header">Fleet Status!</div>
+    <div id="warn" class="warn">WARNING: LOW LIVE GPS REPORTING</div>
+    <div id="content">Loading fleet data…</div>
+  </div>
+
+  <script>
+    require(["esri/request"], function(esriRequest) {
+
+      const layerUrl =
+        "https://catalyst.fecc.coop:6443/arcgis/rest/services/FieldPro/AVL_Trucks/MapServer/0/query";
+
+      const FRESH_MINUTES = 15;
+      const ALERT_THRESHOLD_PCT = 80;
+      const REFRESH_MS = 60000;
+
+      function ringColorForPct(pct) {
+        if (pct >= 80) return "#3cb371"; // green
+        if (pct >= 50) return "#ffcc00"; // yellow
+        return "#ff4444";               // red
+      }
+
+      function displayName(a) {
+        return a.AliasName || a.Name || a.AVLID || "Unknown";
+      }
+
+      function isOnFromComments(val) {
+        return String(val || "").trim().toLowerCase() === "on";
+      }
+
+      function toEpochMs(v) {
+        if (v === null || v === undefined) return null;
+
+        if (typeof v === "number" && Number.isFinite(v)) {
+          return v < 1e12 ? Math.round(v * 1000) : Math.round(v);
+        }
+
+        const s = String(v).trim();
+        if (!s) return null;
+
+        if (/^\d+$/.test(s)) {
+          const n = Number(s);
+          if (!Number.isFinite(n)) return null;
+          return n < 1e12 ? Math.round(n * 1000) : Math.round(n);
+        }
+
+        const t = new Date(s).getTime();
+        if (Number.isFinite(t)) return t;
+
+        const t2 = new Date(s.replace(",", "")).getTime();
+        return Number.isFinite(t2) ? t2 : null;
+      }
+
+      function normalizeHeading(h) {
+        if (h === null || h === undefined) return null;
+        const s = String(h).trim().toUpperCase();
+        if (!s) return null;
+
+        const num = Number(s);
+        if (Number.isFinite(num)) {
+          let d = num % 360;
+          if (d < 0) d += 360;
+          return d;
+        }
+
+        const map = {
+          "N": 0, "NNE": 22.5, "NE": 45, "ENE": 67.5,
+          "E": 90, "ESE": 112.5, "SE": 135, "SSE": 157.5,
+          "S": 180, "SSW": 202.5, "SW": 225, "WSW": 247.5,
+          "W": 270, "WNW": 292.5, "NW": 315, "NNW": 337.5
+        };
+
+        const compact = s.replace(/\s+/g, "");
+        return (map[compact] !== undefined) ? map[compact] : null;
+      }
+
+      function modeHeadingDeg(degList) {
+        const buckets = new Map();
+        for (const deg of degList) {
+          if (!Number.isFinite(deg)) continue;
+          const bucket = (Math.round(deg / 22.5) * 22.5) % 360;
+          buckets.set(bucket, (buckets.get(bucket) || 0) + 1);
+        }
+        let best = null, bestCount = 0;
+        for (const [k, v] of buckets.entries()) {
+          if (v > bestCount) { best = k; bestCount = v; }
+        }
+        return best;
+      }
+
+      function degToCardinal(deg) {
+        if (!Number.isFinite(deg)) return "Unknown";
+        const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+        return dirs[Math.round(deg / 22.5) % 16];
+      }
+
+      function loadFleet() {
+        esriRequest(layerUrl, {
+          query: {
+            where: "1=1",
+            outFields: "Name,AliasName,AVLID,Comments,GPSTimeStamp,Speed,Heading",
+            returnGeometry: false,
+            f: "json"
+          },
+          responseType: "json"
+        }).then(resp => {
+
+          const features = (resp.data && resp.data.features) ? resp.data.features : [];
+          const nowMs = Date.now();
+          const freshWindowMs = FRESH_MINUTES * 60000;
+
+          let total = features.length;
+          let on = 0, off = 0;
+          let live = 0, stale = 0;
+          let idling = 0, moving = 0;
+
+          const staleList = [];
+          const movingHeadings = [];
+          const onHeadings = [];
+
+          let newestGpsMs = null;
+
+          for (const f of features) {
+            const a = (f && f.attributes) ? f.attributes : {};
+            const isOn = isOnFromComments(a.Comments);
+
+            if (!isOn) {
+              off++;
+              continue;
+            }
+
+            on++;
+
+            const tsMs = toEpochMs(a.GPSTimeStamp);
+
+            if (tsMs !== null) {
+              if (newestGpsMs === null || tsMs > newestGpsMs) newestGpsMs = tsMs;
+            }
+
+            const isLive = (tsMs !== null) && ((nowMs - tsMs) <= freshWindowMs);
+
+            if (isLive) live++;
+            else {
+              stale++;
+              staleList.push({
+                name: displayName(a),
+                minutes: tsMs !== null ? Math.floor((nowMs - tsMs) / 60000) : null
+              });
+            }
+
+            if (a.Speed === 0) idling++;
+            if (a.Speed > 0) moving++;
+
+            const hDeg = normalizeHeading(a.Heading);
+            if (hDeg !== null) {
+              onHeadings.push(hDeg);
+              if (a.Speed > 0) movingHeadings.push(hDeg);
+            }
+          }
+
+          staleList.sort((a, b) => (b.minutes ?? 9999) - (a.minutes ?? 9999));
+
+          // Ring now shows % ON out of total
+          const onPct = total > 0 ? Math.round((on / total) * 100) : 0;
+          const deg = Math.round((onPct / 100) * 360);
+          const ringColor = ringColorForPct(onPct);
+
+          // Warning still based on live % of ON vehicles
+          const livePctOfOn = on > 0 ? Math.round((live / on) * 100) : 0;
+          const warnEl = document.getElementById("warn");
+          warnEl.style.display = (on > 0 && livePctOfOn < ALERT_THRESHOLD_PCT) ? "block" : "none";
+
+          const chosenHeadingDeg = modeHeadingDeg(movingHeadings.length ? movingHeadings : onHeadings);
+          const headingLabel = chosenHeadingDeg !== null ? degToCardinal(chosenHeadingDeg) : "Unknown";
+
+          const newestGpsText = newestGpsMs !== null ? new Date(newestGpsMs).toLocaleString() : "Unknown";
+
+          let staleHtml = "";
+          for (const s of staleList.slice(0, 5)) {
+            const txt = (s.minutes !== null) ? (s.minutes + "m ago") : "no GPS";
+            staleHtml += `<div>${s.name}, ${txt}</div>`;
+          }
+
+          document.getElementById("content").innerHTML = `
+            <div class="top-row">
+              <div>
+                <div class="ring" style="--deg:${deg}deg; --ringColor:${ringColor};">
+                  <div class="inner">
+                    <div class="pct">${onPct}%</div>
+                    <div class="sub">Vehicles On</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="compass" style="--headingDeg:${chosenHeadingDeg !== null ? chosenHeadingDeg + "deg" : "0deg"};">
+                  <div class="dial"></div>
+                  <div class="n">N</div>
+                  <div class="e">E</div>
+                  <div class="s">S</div>
+                  <div class="w">W</div>
+                  <div class="needle"></div>
+                </div>
+                <div class="compass-label">Dominant heading: <strong>${headingLabel}</strong></div>
+              </div>
+            </div>
+
+            <div class="section">Live window: ${FRESH_MINUTES} minutes, On vehicles only</div>
+
+            <div class="kpis">
+              <div class="kpi"><strong>${total}</strong>Total</div>
+              <div class="kpi"><strong>${on}</strong>On</div>
+              <div class="kpi"><strong>${off}</strong>Off</div>
+              <div class="kpi"><strong>${live}</strong>Live</div>
+
+              <div class="kpi"><strong>${stale}</strong>Stale</div>
+              <div class="kpi"><strong>${idling}</strong>Idling</div>
+              <div class="kpi"><strong>${moving}</strong>Moving</div>
+              <div class="kpi"><strong>${newestGpsText}</strong>Newest GPS</div>
+            </div>
+
+            ${staleHtml ? `<div class="stale"><strong>Most stale (On)</strong><div>${staleHtml}</div></div>` : ""}
+
+            <div class="muted">Updated ${new Date().toLocaleTimeString()}</div>
+          `;
+
+        }).catch(err => {
+          console.error("Error loading fleet data:", err);
+          document.getElementById("warn").style.display = "none";
+          document.getElementById("content").innerHTML =
+            "<div class='err'>Error loading fleet data.</div>" +
+            "<div class='err'>If this service requires authentication or blocks cross-origin requests (CORS), the browser may prevent the query.</div>";
+        });
+      }
+
+      loadFleet();
+      setInterval(loadFleet, REFRESH_MS);
+    });
+  </script>
+</body>
+</html>
