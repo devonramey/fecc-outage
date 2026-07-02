@@ -2,160 +2,160 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Outage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customers Out</title>
+
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
 
   <style>
-    html, body {
+    html,
+    body {
       margin: 0;
       padding: 0;
-      background: #555555;
-      font-family: 'Segoe UI', sans-serif;
-      color: white;
       width: 100%;
       height: 100%;
+      background: #555555;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: white;
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    .alert-card {
+    .outage-card {
       background: #333333;
       border-radius: 10px;
-      padding: 1rem 1rem 0.8rem 1rem;
+      padding: 1rem 1rem 0.9rem;
       max-width: 600px;
-      width: 100%;
-      box-shadow: 0 0 12px rgba(255,0,0,0.4);
+      width: calc(100% - 2rem);
       text-align: center;
+      box-shadow: 0 0 12px rgba(255, 0, 0, 0.35);
     }
 
-    .alert-text {
-      font-size: 48px;
-      font-weight: bold;
-      color: red;
-      animation: flash 1s infinite;
-      line-height: 1;
-      margin: 0 0 0.75rem 0;
-    }
-
-    @keyframes flash {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    .event {
-      background: yellow;
-      color: black;
-      font-weight: bold;
-      display: inline-block;
-      padding: 0.4rem 1rem;
-      border-radius: 6px;
+    .heading {
       font-size: 1.25rem;
-      margin-bottom: 0.9rem;
-    }
-
-    .summary {
-      font-size: 1rem;
-      margin-bottom: 1rem;
-      color: #eaeaea;
-    }
-
-    .label {
-      background: yellow;
-      color: black;
-      font-weight: bold;
-      display: inline-block;
-      padding: 0.3rem 1rem;
-      border-radius: 6px;
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .affected {
-      white-space: pre-wrap;
-      color: #dddddd;
-      font-size: 0.95rem;
-    }
-
-    .count {
-      font-size: 64px;
       font-weight: 800;
-      margin: 0.25rem 0 0.5rem 0;
-      line-height: 1;
+      color: #111111;
+      background: #ffd400;
+      border-radius: 6px;
+      padding: 0.4rem 1rem;
+      display: inline-block;
+      margin-bottom: 0.8rem;
     }
 
-    .muted {
+    .customer-count {
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+      margin: 0.2rem 0 0.5rem;
+      color: #ff3b3b;
+    }
+
+    .customer-count.normal {
+      color: #49d17d;
+    }
+
+    .description {
+      font-size: 1.05rem;
+      color: #eeeeee;
+      margin-bottom: 0.8rem;
+    }
+
+    .updated {
       color: #cfcfcf;
       font-size: 0.9rem;
       margin-top: 0.75rem;
     }
 
-    .small {
-      color: #d9d9d9;
-      font-size: 0.9rem;
-      margin: 0;
+    .error {
+      color: #ffb3b3;
+      font-size: 0.95rem;
+      line-height: 1.4;
     }
   </style>
 </head>
 
 <body>
-  <div class="alert-card">
-    <div class="alert-text">OUTAGE!</div>
-    <div id="outage-content">Loading outage count...</div>
+  <div class="outage-card">
+    <div id="outage-content">Loading customer outage total...</div>
   </div>
 
   <script>
-    require(["esri/request"], function(esriRequest) {
+    require(["esri/request"], function (esriRequest) {
       const layerQueryUrl =
         "https://catalyst.fecc.coop:6443/arcgis/rest/services/FieldPro/Milsoft_Outages/MapServer/0/query";
 
-      const refreshMs = 60000; // 60 seconds
+      const refreshMs = 60000;
 
-      function formatTime(d) {
-        const pad = (n) => String(n).padStart(2, "0");
-        return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-      }
-
-      function loadCount() {
-        esriRequest(layerQueryUrl, {
-          query: {
-            where: "1=1",
-            returnCountOnly: true,
-            f: "json"
-          },
-          responseType: "json"
-        })
-        .then((response) => {
-          const count = response?.data?.count;
-
-          if (typeof count !== "number") {
-            document.getElementById("outage-content").innerHTML =
-              "<p>Error: unexpected response from outage service.</p>";
-            return;
-          }
-
-          const now = new Date();
-          const statusText = count === 1 ? "Active outage" : "Active outages";
-
-          const html = `
-            <div class="event">${statusText}</div>
-            <div class="count">${count.toLocaleString()}</div>
-            <div class="summary">${count === 0 ? "No active outages reported." : "Active outages currently reported by the service."}</div>
-            <div class="muted">Last updated: ${formatTime(now)}</div>
-          `;
-
-          document.getElementById("outage-content").innerHTML = html;
-        })
-        .catch((err) => {
-          console.error("Error loading outage count:", err);
-          document.getElementById("outage-content").innerHTML =
-            "<p>Error loading outage count.</p><p class='small'>If this service requires authentication or blocks cross-origin requests (CORS), the browser may prevent the query.</p>";
+      function formatTime(date) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
         });
       }
 
-      loadCount();
-      setInterval(loadCount, refreshMs);
+      function loadCustomersOut() {
+        const statistics = [
+          {
+            statisticType: "sum",
+            onStatisticField: "CustomersOutNow",
+            outStatisticFieldName: "total_customers_out"
+          }
+        ];
+
+        esriRequest(layerQueryUrl, {
+          query: {
+            where: "1=1",
+            outStatistics: JSON.stringify(statistics),
+            returnGeometry: false,
+            f: "json",
+            _ts: Date.now()
+          },
+          responseType: "json"
+        })
+          .then((response) => {
+            const attributes = response?.data?.features?.[0]?.attributes;
+            const total = Number(attributes?.total_customers_out || 0);
+            const now = new Date();
+
+            const hasOutage = total > 0;
+            const heading = hasOutage
+              ? "CUSTOMERS CURRENTLY OUT"
+              : "OUTAGE STATUS";
+
+            const description = hasOutage
+              ? "Customers currently affected by active outages."
+              : "No customers are currently reported out.";
+
+            document.getElementById("outage-content").innerHTML = `
+              <div class="heading">${heading}</div>
+              <div class="customer-count ${hasOutage ? "" : "normal"}">
+                ${total.toLocaleString()}
+              </div>
+              <div class="description">${description}</div>
+              <div class="updated">
+                Last updated: ${formatTime(now)}
+              </div>
+            `;
+          })
+          .catch((err) => {
+            console.error("Error loading customer outage total:", err);
+
+            document.getElementById("outage-content").innerHTML = `
+              <div class="heading">OUTAGE STATUS</div>
+              <div class="error">
+                Unable to load the customer outage total.
+                <br><br>
+                Check the browser console for the specific service error.
+              </div>
+            `;
+          });
+      }
+
+      loadCustomersOut();
+      setInterval(loadCustomersOut, refreshMs);
     });
   </script>
 </body>
