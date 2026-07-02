@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Customers Out</title>
+  <title>Customers Without Power</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.29/"></script>
@@ -27,29 +27,29 @@
       background: #333333;
       border-radius: 10px;
       padding: 1rem 1rem 0.9rem;
-      max-width: 600px;
       width: calc(100% - 2rem);
+      max-width: 600px;
       text-align: center;
-      box-shadow: 0 0 12px rgba(255, 0, 0, 0.35);
+      box-shadow: 0 0 12px rgba(255, 0, 0, 0.4);
     }
 
     .heading {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: #111111;
-      background: #ffd400;
-      border-radius: 6px;
-      padding: 0.4rem 1rem;
       display: inline-block;
       margin-bottom: 0.8rem;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      background: #ffd400;
+      color: #111111;
+      font-size: 1.25rem;
+      font-weight: 800;
     }
 
     .customer-count {
+      margin: 0.2rem 0 0.5rem;
+      color: #ff3b3b;
       font-size: 72px;
       font-weight: 800;
       line-height: 1;
-      margin: 0.2rem 0 0.5rem;
-      color: #ff3b3b;
     }
 
     .customer-count.normal {
@@ -57,15 +57,15 @@
     }
 
     .description {
-      font-size: 1.05rem;
-      color: #eeeeee;
       margin-bottom: 0.8rem;
+      color: #eeeeee;
+      font-size: 1.05rem;
     }
 
     .updated {
+      margin-top: 0.75rem;
       color: #cfcfcf;
       font-size: 0.9rem;
-      margin-top: 0.75rem;
     }
 
     .error {
@@ -115,43 +115,44 @@
           },
           responseType: "json"
         })
-          .then((response) => {
-            const attributes = response?.data?.features?.[0]?.attributes;
-            const total = Number(attributes?.total_customers_out || 0);
-            const now = new Date();
+        .then(function (response) {
+          const attributes = response?.data?.features?.[0]?.attributes;
+          const totalCustomersOut = Number(
+            attributes?.total_customers_out || 0
+          );
 
-            const hasOutage = total > 0;
-            const heading = hasOutage
-              ? "CUSTOMERS CURRENTLY OUT"
-              : "OUTAGE STATUS";
+          const hasOutage = totalCustomersOut > 0;
+          const now = new Date();
 
-            const description = hasOutage
-              ? "Customers currently affected by active outages."
-              : "No customers are currently reported out.";
+          const heading = hasOutage
+            ? "CUSTOMERS WITHOUT POWER"
+            : "POWER STATUS";
 
-            document.getElementById("outage-content").innerHTML = `
-              <div class="heading">${heading}</div>
-              <div class="customer-count ${hasOutage ? "" : "normal"}">
-                ${total.toLocaleString()}
-              </div>
-              <div class="description">${description}</div>
-              <div class="updated">
-                Last updated: ${formatTime(now)}
-              </div>
-            `;
-          })
-          .catch((err) => {
-            console.error("Error loading customer outage total:", err);
+          const description = hasOutage
+            ? "Customers currently without power."
+            : "No customers are currently without power.";
 
-            document.getElementById("outage-content").innerHTML = `
-              <div class="heading">OUTAGE STATUS</div>
-              <div class="error">
-                Unable to load the customer outage total.
-                <br><br>
-                Check the browser console for the specific service error.
-              </div>
-            `;
-          });
+          document.getElementById("outage-content").innerHTML = `
+            <div class="heading">${heading}</div>
+            <div class="customer-count ${hasOutage ? "" : "normal"}">
+              ${totalCustomersOut.toLocaleString()}
+            </div>
+            <div class="description">${description}</div>
+            <div class="updated">
+              Last updated: ${formatTime(now)}
+            </div>
+          `;
+        })
+        .catch(function (err) {
+          console.error("Error loading customer outage total:", err);
+
+          document.getElementById("outage-content").innerHTML = `
+            <div class="heading">POWER STATUS</div>
+            <div class="error">
+              Unable to load the customer outage total.
+            </div>
+          `;
+        });
       }
 
       loadCustomersOut();
