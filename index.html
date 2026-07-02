@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customers Without Power</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #555555;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .outage-card {
+      background: #333333;
+      border-radius: 10px;
+      padding: 1rem 1rem 0.9rem;
+      width: calc(100% - 2rem);
+      max-width: 600px;
+      text-align: center;
+      box-shadow: 0 0 12px rgba(255, 0, 0, 0.4);
+    }
+
+    .heading {
+      display: inline-block;
+      margin-bottom: 0.8rem;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      background: #ffd400;
+      color: #111111;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .customer-count {
+      margin: 0.2rem 0 0.5rem;
+      color: #ff3b3b;
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .customer-count.normal {
+      color: #49d17d;
+    }
+
+    .description {
+      margin-bottom: 0.8rem;
+      color: #eeeeee;
+      font-size: 1.05rem;
+    }
+
+    .updated {
+      margin-top: 0.75rem;
+      color: #cfcfcf;
+      font-size: 0.9rem;
+    }
+
+    .error {
+      color: #ffb3b3;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="outage-card">
+    <div id="outage-content">Loading customer outage total...</div>
+  </div>
+
+  <script>
+    require(["esri/request"], function (esriRequest) {
+      const layerQueryUrl =
+        "https://catalyst.fecc.coop:6443/arcgis/rest/services/FieldPro/Milsoft_Outages/MapServer/0/query";
+
+      const refreshMs = 60000;
+
+      function formatTime(date) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+      }
+
+      function loadCustomersOut() {
+        const statistics = [
+          {
+            statisticType: "sum",
+            onStatisticField: "CustomersOutNow",
+            outStatisticFieldName: "total_customers_out"
+          }
+        ];
+
+        esriRequest(layerQueryUrl, {
+          query: {
+            where: "1=1",
+            outStatistics: JSON.stringify(statistics),
+            returnGeometry: false,
+            f: "json",
+            _ts: Date.now()
+          },
+          responseType: "json"
+        })
+        .then(function (response) {
+          const attributes = response?.data?.features?.[0]?.attributes;
+          const totalCustomersOut = Number(
+            attributes?.total_customers_out || 0
+          );
+
+          const hasOutage = totalCustomersOut > 0;
+          const now = new Date();
+
+          const heading = hasOutage
+            ? "CUSTOMERS WITHOUT POWER"
+            : "POWER STATUS";
+
+          const description = hasOutage
+            ? "Customers currently without power."
+            : "No customers are currently without power.";
+
+          document.getElementById("outage-content").innerHTML = `
+            <div class="heading">${heading}</div>
+            <div class="customer-count ${hasOutage ? "" : "normal"}">
+              ${totalCustomersOut.toLocaleString()}
+            </div>
+            <div class="description">${description}</div>
+            <div class="updated">
+              Last updated: ${formatTime(now)}
+            </div>
+          `;
+        })
+        .catch(function (err) {
+          console.error("Error loading customer outage total:", err);
+
+          document.getElementById("outage-content").innerHTML = `
+            <div class="heading">POWER STATUS</div>
+            <div class="error">
+              Unable to load the customer outage total.
+            </div>
+          `;
+        });
+      }
+
+      loadCustomersOut();
+      setInterval(loadCustomersOut, refreshMs);
+    });
+  </script>
+</body>
+</html>
